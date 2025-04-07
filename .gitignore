@@ -1,7 +1,7 @@
 # Ignorer les gros CSV (ou toute autre extension volumineuse)
 data/concatenated/*.csv
 data/raw/train/*.csv
-
+data/raw/test/*.csv
 # Optionnel : ignorer d'autres fichiers temporaires
 __pycache__/
 *.pyc
