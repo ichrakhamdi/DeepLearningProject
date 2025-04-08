@@ -10,18 +10,34 @@ class LSTMTrainer:
         self.experiment_id = experiment_id
         
     def train(self, X_train, y_train, X_val, y_val, num_classes, class_weights):
-        if len(X_train.shape) != 3:
-            raise ValueError(f"Input shape must be 3D (samples, timesteps, features). Got {X_train.shape}")
+
+        checkpoint_path = self.config.MODELS_PATH / f'best_model_{self.experiment_id}.h5'
+
+        if checkpoint_path.exists():
+            print(f"Loading existing checkpoint from {checkpoint_path} ...")
+            model = tf.keras.models.load_model(str(checkpoint_path))
+            additional_epochs = 5
+            history = model.fit(
+                X_train, y_train,
+                validation_data=(X_val, y_val),
+                epochs=additional_epochs,
+                batch_size=self.config.BATCH_SIZE,
+                class_weight=class_weights,
+                verbose=1
+            )
+            return model, history
+
+        # If no checkpoint exists, build a new model
         model = LSTMModel(X_train.shape[1:], num_classes).model
-        
+
         model.compile(
             optimizer=tf.keras.optimizers.Adam(learning_rate=self.config.LEARNING_RATE),
             loss=self._get_loss(num_classes),
             metrics=self._get_metrics(num_classes)
         )
-        
+
         callbacks = self._get_callbacks()
-        
+
         history = model.fit(
             X_train, y_train,
             validation_data=(X_val, y_val),
@@ -32,6 +48,7 @@ class LSTMTrainer:
             verbose=1
         )
         return model, history
+
     
     def _get_loss(self, num_classes):
         if num_classes == 1:
@@ -63,7 +80,7 @@ class LSTMTrainer:
                 monitor='val_loss',
                 factor=0.2,
                 patience=self.config.PATIENCE // 2
-            ),
+            ), 
             ModelCheckpoint(
                 filepath=str(self.config.MODELS_PATH / f'best_model_{self.experiment_id}.h5'),
                 save_best_only=True,
