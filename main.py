@@ -15,10 +15,10 @@ def main():
     train_df = pd.read_csv("data/concatenated/train.csv")
     test_df = pd.read_csv("data/concatenated/test.csv")
 
-    labels = ['label_2', 'label_6', 'label_19']
-    # Apply separately
-    train_df = sample_per_class(train_df, labels)
-    test_df = sample_per_class(test_df, labels)
+    # labels = ['label_2', 'label_6', 'label_19']
+    # # Apply separately
+    # train_df = sample_per_class(train_df, labels)
+    # test_df = sample_per_class(test_df, labels)
 
     print('loading data done!')
 
