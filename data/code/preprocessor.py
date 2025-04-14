@@ -4,11 +4,11 @@ import warnings
 import collections
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 from imblearn.over_sampling import ADASYN
-from config.settings import LSTMSettings
+from config.general_settings import GeneralSettings
 
 class DataPreprocessor:
     def __init__(self):
-        self.config = LSTMSettings()
+        self.config = GeneralSettings()
         self.scaler = None
         self.encoder = None
         self.class_distributions = {}
