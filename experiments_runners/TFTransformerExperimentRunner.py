@@ -101,8 +101,8 @@ class TFTransformerExperimentRunner(BaseExperimentRunner):
     def _save_plots(self, exp_id, history, model, X_test, y_test, encoder):
         plt.figure(figsize=(12, 5))
         plt.subplot(1, 2, 1)
-        plt.plot(history.history['output_accuracy'], label='Train')
-        plt.plot(history.history['val_output_accuracy'], label='Validation')
+        plt.plot(history.history['output_binary_accuracy'], label='Train')
+        plt.plot(history.history['val_output_binary_accuracy'], label='Validation')
         plt.title(f'{exp_id} Accuracy')
         plt.legend()
 

@@ -49,9 +49,8 @@ class TFTransformerTrainer:
             return {"output": tf.keras.losses.SparseCategoricalCrossentropy(from_logits=False), "importances": None}
 
     def _get_metrics(self, num_classes):
-        base_metrics = [Accuracy(name="accuracy")]
         if num_classes == 1:
-            output_metrics = {"output": [tf.keras.metrics.Accuracy(name="accuracy")], "importances": None}
+            output_metrics = {"output": [tf.keras.metrics.BinaryAccuracy(name="binary_accuracy")], "importances": None}
         else:
             output_metrics = {"output": [tf.keras.metrics.SparseCategoricalAccuracy(name="accuracy")],
                               "importances": None}
@@ -75,7 +74,7 @@ class TFTransformerTrainer:
                                       f'best_weights_{self.experiment_id}'),
                 save_best_only=True,
                 mode='min',
-                monitor='loss',
+                monitor='val_loss',
                 save_weights_only=True,
                 verbose=1
             )
