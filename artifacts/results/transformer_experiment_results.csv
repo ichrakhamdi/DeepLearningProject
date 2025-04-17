@@ -1,0 +1,13 @@
+experiment,error,status
+transformer_binary_augTrue_cwTrue,"Number of classes, 1, does not match size of target_names, 2. Try specifying the labels parameter",failed
+transformer_binary_augTrue_cwFalse,"Number of classes, 1, does not match size of target_names, 2. Try specifying the labels parameter",failed
+transformer_binary_augFalse_cwTrue,"Number of classes, 1, does not match size of target_names, 2. Try specifying the labels parameter",failed
+transformer_binary_augFalse_cwFalse,"Number of classes, 1, does not match size of target_names, 2. Try specifying the labels parameter",failed
+transformer_multi_augTrue_cwTrue,"Number of classes, 1, does not match size of target_names, 2. Try specifying the labels parameter",failed
+transformer_multi_augTrue_cwFalse,"Number of classes, 1, does not match size of target_names, 2. Try specifying the labels parameter",failed
+transformer_multi_augFalse_cwTrue,"Number of classes, 1, does not match size of target_names, 2. Try specifying the labels parameter",failed
+transformer_multi_augFalse_cwFalse,"Number of classes, 1, does not match size of target_names, 2. Try specifying the labels parameter",failed
+transformer_full_augTrue_cwTrue,"Number of classes, 1, does not match size of target_names, 2. Try specifying the labels parameter",failed
+transformer_full_augTrue_cwFalse,"Number of classes, 1, does not match size of target_names, 2. Try specifying the labels parameter",failed
+transformer_full_augFalse_cwTrue,"Number of classes, 1, does not match size of target_names, 2. Try specifying the labels parameter",failed
+transformer_full_augFalse_cwFalse,"Number of classes, 1, does not match size of target_names, 2. Try specifying the labels parameter",failed

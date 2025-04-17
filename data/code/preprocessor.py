@@ -4,11 +4,11 @@ import warnings
 import collections
 from sklearn.preprocessing import StandardScaler, LabelEncoder
 from imblearn.over_sampling import ADASYN
-from config.settings import LSTMSettings
+from config.settings import TransformerSettings
 
 class DataPreprocessor:
     def __init__(self):
-        self.config = LSTMSettings()
+        self.config = TransformerSettings()
         self.scaler = None
         self.encoder = None
         self.class_distributions = {}
@@ -54,16 +54,8 @@ class DataPreprocessor:
         label_col = self.config.CLASS_MAP[class_type]
         
         if class_type == 'binary':
-            unique_labels = np.unique(df[label_col])
-            benign_candidates = [label for label in unique_labels if str(label).lower() == 'benign']
-            if benign_candidates:
-                benign_label = benign_candidates[0]
-            elif len(unique_labels) == 2:
-                benign_label = sorted(unique_labels)[0]
-                warnings.warn(f"'Benign' class not found; assuming '{benign_label}' as benign for binary classification.")
-            else:
-                raise ValueError("Binary classification requires exactly two classes.")
-            return (df[label_col].apply(lambda x: str(x).lower()) != benign_label.lower()).astype(int).values
+            # Convert to binary classification (BENIGN vs ATTACK)
+            return (df[label_col] != 'BENIGN').astype(int).values
         else:
             if fit_encoder:
                 self.encoder = LabelEncoder()
