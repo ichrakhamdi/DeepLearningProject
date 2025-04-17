@@ -9,7 +9,6 @@ class LSTMSettings(GeneralSettings):
     # Model configuration
     LSTM_UNITS = 128
     DROPOUT_RATE = 0.4
-    PATIENCE = 5
 
 
     # Paths

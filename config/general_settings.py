@@ -19,11 +19,13 @@ class GeneralSettings:
     CLASS_WEIGHTS = [True, False]
     WINDOW_SIZE = 4
 
+
     # Model configuration
     LEARNING_RATE = 0.001
     BATCH_SIZE = 1024
     EPOCHS = 50
     WEIGHT_DECAY = 0.0001
+    PATIENCE = 5
 
     RESULTS_PATH = None
     ENCODERS_PATH = None
