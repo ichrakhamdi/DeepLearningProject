@@ -23,7 +23,6 @@ class GeneralSettings:
     LEARNING_RATE = 0.001
     BATCH_SIZE = 1024
     EPOCHS = 50
-    PATIENCE = 5
     WEIGHT_DECAY = 0.0001
 
     RESULTS_PATH = None

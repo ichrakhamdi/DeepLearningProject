@@ -14,6 +14,7 @@ class TFTransformerSettings(GeneralSettings):
     ff_dropout=0.3
     explainable=True
     out_dim = 1
+    PATIENCE = 20
     # Paths
     BASE_DIR = Path(__file__).resolve().parent.parent
     ARTIFACTS_PATH = BASE_DIR / 'artifacts' / 'TFTransformer'

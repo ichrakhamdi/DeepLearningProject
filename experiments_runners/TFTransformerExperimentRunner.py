@@ -53,6 +53,7 @@ class TFTransformerExperimentRunner(BaseExperimentRunner):
             class_type,
             class_weights
         )
+        self.current_experiment_num_classes = num_classes
         # 5) Now evaluate on the final test set
         X_test, y_test, _ = self.preprocessor.preprocess_validation_test(
             self.test_df, class_type
@@ -101,8 +102,12 @@ class TFTransformerExperimentRunner(BaseExperimentRunner):
     def _save_plots(self, exp_id, history, model, X_test, y_test, encoder):
         plt.figure(figsize=(12, 5))
         plt.subplot(1, 2, 1)
-        plt.plot(history.history['output_binary_accuracy'], label='Train')
-        plt.plot(history.history['val_output_binary_accuracy'], label='Validation')
+        if self.current_experiment_num_classes == 1:
+            plt.plot(history.history['output_binary_accuracy'], label='Train')
+            plt.plot(history.history['val_output_binary_accuracy'], label='Validation')
+        else:
+            plt.plot(history.history['output_accuracy'], label='Train')
+            plt.plot(history.history['val_output_accuracy'], label='Validation')
         plt.title(f'{exp_id} Accuracy')
         plt.legend()
 
