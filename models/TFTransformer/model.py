@@ -18,7 +18,6 @@ class TFTransformerModel:
         val_df_after_scaling = pd.DataFrame(np.concatenate((X_val, y_val.reshape(-1, 1)), axis=1),
                                             columns=self.tf_config.FEATURE_COLS + [class_type])
 
-        # Si 'label' est une Series dans ton DataFrame
         train_df_after_scaling[class_type] = train_df_after_scaling[class_type].to_numpy()
 
         self.train_dataset = df_to_dataset(train_df_after_scaling, class_type,
@@ -42,7 +41,7 @@ class TFTransformerModel:
         )
         # Pass the encoder to the model
         ft_model = FTTransformer(
-            encoder=ft_linear_encoder,  # Encoder from above
+            encoder=ft_linear_encoder,
             out_dim=num_classes,  # Number of outputs in final layer
             out_activation='sigmoid' if num_classes == 1 else 'softmax',  # Activation function for final layer
         )

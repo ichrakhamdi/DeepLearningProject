@@ -69,9 +69,6 @@ class TFTransformerExperimentRunner(BaseExperimentRunner):
         self._save_artifacts(exp_id, model, encoder)
         self._save_plots(exp_id, history, model, test_dataset, y_test, encoder)
 
-        # except Exception as e:
-        #     print(f"Experiment failed: {str(e)}")
-        #     self._log_error(exp_id, str(e))
 
     def _evaluate_and_save(self, exp_id, model, X_test, y_test, encoder):
         y_pred = model.predict(X_test)['output']
