@@ -41,7 +41,7 @@ class TFTransformerExperimentRunner(BaseExperimentRunner):
             val_df_split, class_type
         )
 
-        # 4) Build & train model using LSTMTrainer
+        # 4) Build & train model using FTTransformer
         num_classes = 1 if class_type == 'binary' else len(np.unique(y_train))
         class_weights = self.preprocessor.get_class_weights(y_train) if cw else None
 

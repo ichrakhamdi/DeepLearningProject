@@ -1,0 +1,2 @@
+model_checkpoint_path: "best_weights_6class_augFalse_cwTrue"
+all_model_checkpoint_paths: "best_weights_6class_augFalse_cwTrue"
