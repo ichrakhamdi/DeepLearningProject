@@ -4,6 +4,8 @@ import argparse
 
 from experiments_runners.TFTransformerExperimentRunner import TFTransformerExperimentRunner
 from experiments_runners.LSTMExperimentRunner import LSTMExperimentRunner
+from experiments_runners.TransformerExperimentRunner import TransformerExperimentRunner
+from experiments_runners.CNNTransformerExperimentRunner import CNNTransformerExperimentRunner
 
 
 def main():
@@ -24,6 +26,14 @@ def main():
 
     if args.model == "LSTM":
         runner = LSTMExperimentRunner(train_df, test_df)
+        runner.run_experiments()
+        print("=== All experiments completed successfully ===")
+    elif args.model == "Transformer":
+        runner = TransformerExperimentRunner(train_df, test_df)
+        runner.run_experiments()
+        print("=== All experiments completed successfully ===")
+    elif args.model == "CNNTransformer":
+        runner = CNNTransformerExperimentRunner(train_df, test_df)
         runner.run_experiments()
         print("=== All experiments completed successfully ===")
     elif args.model == "TabTransformer":
