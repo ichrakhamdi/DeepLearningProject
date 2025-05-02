@@ -1,60 +1,84 @@
-import pandas as pd
-import numpy as np
 import tensorflow as tf
-from config.CNNTFTransformer_settings import CNNTFTransformerSettings
-from .utils import df_to_dataset
-from tabtransformertf.models.fttransformer import FTTransformerEncoder, FTTransformer
-from tensorflow.keras.layers import Input, Conv1D, ReLU, GlobalAveragePooling1D
 from tensorflow.keras.models import Model
+from tensorflow.keras.layers import Input, Dense, Dropout, LayerNormalization, MultiHeadAttention, GlobalAveragePooling1D, Conv1D, MaxPooling1D, BatchNormalization
 
-class CNNTFTransformerModel:
-    def __init__(self, X_train, y_train, X_val, y_val, num_classes, class_type):
-        self.config = CNNTFTransformerSettings()
-        # prepare datasets same as TFTransformerModel
-        train_df = pd.DataFrame(np.concatenate((X_train, y_train.reshape(-1,1)), axis=1),
-                                columns=self.config.FEATURE_COLS + [class_type])
-        val_df = pd.DataFrame(np.concatenate((X_val, y_val.reshape(-1,1)), axis=1),
-                              columns=self.config.FEATURE_COLS + [class_type])
-        # tf.data.Datasets
-        self.train_dataset = df_to_dataset(train_df, class_type,
-                                           shuffle=True, batch_size=self.config.PATIENCE)
-        self.val_dataset = df_to_dataset(val_df, class_type,
-                                         shuffle=True, batch_size=self.config.PATIENCE)
-        # build model
-        self.model = self._build_model(len(self.config.FEATURE_COLS), num_classes)
+class CNNTransformerModel:
+    def __init__(self, input_shape, num_classes,
+                 # CNN params
+                 filters=64, kernel_size=3, pool_size=2,
+                 # Transformer params
+                 num_heads=8, key_dim=64, ff_dim=128, num_transformer_blocks=2,
+                 dropout_rate=0.1):
 
-    def _build_model(self, num_features, num_classes):
-        # CNN front-end
-        inputs = Input(shape=(num_features, 1), name='features')
-        x = Conv1D(filters=self.config.embedding_dim,
-                   kernel_size=self.config.CNN_KERNEL_SIZE,
-                   padding='same')(inputs)
-        x = ReLU()(x)
-        x = GlobalAveragePooling1D()(x)  # (batch, embedding_dim)
+        self.input_shape = input_shape
+        self.num_classes = num_classes
+        # CNN
+        self.filters = filters
+        self.kernel_size = kernel_size
+        self.pool_size = pool_size
+        # Transformer
+        self.num_heads = num_heads
+        self.key_dim = key_dim
+        self.ff_dim = ff_dim
+        self.num_transformer_blocks = num_transformer_blocks
+        self.dropout_rate = dropout_rate
 
-        # Pass through FTTransformerEncoder on original features
-        ft_encoder = FTTransformerEncoder(
-            numerical_features=self.config.FEATURE_COLS,
-            categorical_features=[],
-            numerical_data=None,
-            categorical_data=None,
-            y=None,
-            numerical_embedding_type='linear',
-            embedding_dim=self.config.embedding_dim,
-            depth=self.config.depth,
-            heads=self.config.heads,
-            attn_dropout=self.config.attn_dropout,
-            ff_dropout=self.config.ff_dropout,
-            explainable=self.config.explainable,
-        )
-        ft_model = FTTransformer(
-            encoder=ft_encoder,
-            out_dim=num_classes,
-            out_activation='sigmoid' if num_classes == 1 else 'softmax'
-        )
+        self.model = self._build_model()
 
-        # Combine: treat x as new single feature and feed into FTTransformer
-        # NOTE: FTTransformer expects dict-input, so we wrap ft_model here
-        outputs = ft_model(x)
-        model = Model(inputs=inputs, outputs=outputs)
-        return model 
+    def _transformer_encoder(self, inputs):
+        # Attention and Normalization
+        x = MultiHeadAttention(num_heads=self.num_heads, key_dim=self.key_dim)(inputs, inputs)
+        x = Dropout(self.dropout_rate)(x)
+        res = x + inputs
+        x = LayerNormalization(epsilon=1e-6)(res)
+
+        # Feed Forward Part
+        ff_out = Dense(self.ff_dim, activation="relu")(x)
+        ff_out = Dropout(self.dropout_rate)(ff_out)
+        ff_out = Dense(inputs.shape[-1])(ff_out) # Project back to input dimension
+        ff_out = Dropout(self.dropout_rate)(ff_out)
+
+        # Add and Norm
+        x = LayerNormalization(epsilon=1e-6)(x + ff_out)
+        return x
+
+    def _build_model(self):
+        inputs = Input(shape=self.input_shape)
+
+        # CNN Feature Extractor Block
+        # You can add more Conv1D/MaxPooling1D layers
+        x = Conv1D(filters=self.filters, kernel_size=self.kernel_size, activation='relu', padding='same')(inputs)
+        # Optional: Batch Normalization
+        # x = BatchNormalization()(x)
+        x = MaxPooling1D(pool_size=self.pool_size, padding='same')(x)
+        x = Dropout(self.dropout_rate)(x)
+
+        # Optional: Add another CNN block
+        # x = Conv1D(filters=self.filters*2, kernel_size=self.kernel_size, activation='relu', padding='same')(x)
+        # x = MaxPooling1D(pool_size=self.pool_size, padding='same')(x)
+        # x = Dropout(self.dropout_rate)(x)
+
+        # Transformer Blocks
+        # Note: The output shape of CNN might change sequence length/feature dim.
+        # Ensure the Transformer part handles this shape.
+        # Positional encoding might be added here if sequence order is still important after CNN.
+
+        for _ in range(self.num_transformer_blocks):
+            x = self._transformer_encoder(x)
+
+        # Pooling and Classification Head
+        x = GlobalAveragePooling1D(data_format="channels_last")(x)
+        x = Dropout(self.dropout_rate)(x)
+
+        activation = "sigmoid" if self.num_classes == 1 else "softmax"
+        outputs = Dense(self.num_classes, activation=activation)(x)
+
+        return Model(inputs=inputs, outputs=outputs)
+
+# Example Usage (requires data preprocessing steps):
+# input_shape = (window_size, num_features) # e.g., (10, 78)
+# num_classes = 1 # For binary classification
+# cnn_transformer = CNNTransformerModel(input_shape, num_classes)
+# model = cnn_transformer.model
+# model.summary()
+# model.compile(optimizer="adam", loss="binary_crossentropy", metrics=["accuracy"])

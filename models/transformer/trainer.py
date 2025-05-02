@@ -3,29 +3,24 @@ import tensorflow as tf
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
 from tensorflow.keras.metrics import Precision, Recall, AUC
 
-# Adjust settings import to use the new CNN+Transformer settings
-from config.CNNTFTransformer_settings import CNNTransformerSettings
-from models.cnn_transformer.model import CNNTransformerModel
+# Adjust settings import to use the new Transformer settings
+from config.transformer_settings import TransformerSettings
+from models.transformer.model import TransformerModel
 
-class CNNTransformerTrainer:
+class TransformerTrainer:
     def __init__(self, experiment_id):
-        # Use CNNTransformerSettings
-        self.config = CNNTransformerSettings()
+        # Use TransformerSettings
+        self.config = TransformerSettings()
         self.experiment_id = experiment_id
 
     def train(self, X_train, y_train, X_val, y_val, num_classes, class_weights):
         if len(X_train.shape) != 3:
             raise ValueError(f"Input shape must be 3D (samples, timesteps, features). Got {X_train.shape}")
 
-        # Instantiate the CNNTransformerModel using parameters from CNNTransformerSettings
-        model = CNNTransformerModel(
+        # Instantiate the TransformerModel using parameters from TransformerSettings
+        model = TransformerModel(
             input_shape=X_train.shape[1:],
             num_classes=num_classes,
-            # CNN params from config
-            filters=self.config.CNN_FILTERS,
-            kernel_size=self.config.KERNEL_SIZE,
-            pool_size=self.config.POOL_SIZE,
-            # Transformer params from config
             num_heads=self.config.NUM_HEADS,
             key_dim=self.config.KEY_DIM,
             ff_dim=self.config.FF_DIM,
@@ -53,10 +48,14 @@ class CNNTransformerTrainer:
         return model, history
 
     def _get_loss(self, num_classes):
-        if num_classes == 1:
+        # Loss function depends on the output layer activation and label format
+        if num_classes == 1: # Assuming sigmoid output for binary
             return tf.keras.losses.BinaryCrossentropy()
-        else:
+        else: # Assuming softmax output for multi-class
+            # Use SparseCategoricalCrossentropy if labels are integers
             return tf.keras.losses.SparseCategoricalCrossentropy()
+            # Use CategoricalCrossentropy if labels are one-hot encoded
+            # return tf.keras.losses.CategoricalCrossentropy()
 
     def _get_metrics(self, num_classes):
         base_metrics = ['accuracy']
@@ -66,14 +65,19 @@ class CNNTransformerTrainer:
                 Precision(name='precision'),
                 Recall(name='recall')
             ]
+        # For sparse multi-class labels
         return base_metrics + [
             tf.keras.metrics.SparseTopKCategoricalAccuracy(k=1, name='top1_acc')
+            # Add other relevant metrics if needed
         ]
+        # If using one-hot encoded labels for multi-class:
+        # return base_metrics + [tf.keras.metrics.TopKCategoricalAccuracy(k=1, name='top1_acc')]
+
 
     def _get_callbacks(self):
-        # Use MODELS_PATH from CNNTransformerSettings
-        checkpoint_path = self.config.MODELS_PATH / f'best_cnn_transformer_model_{self.experiment_id}.h5'
-        checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
+        # Use MODELS_PATH from TransformerSettings
+        checkpoint_path = self.config.MODELS_PATH / f'best_transformer_model_{self.experiment_id}.h5'
+        checkpoint_path.parent.mkdir(parents=True, exist_ok=True) # Ensure directory exists
 
         return [
             EarlyStopping(

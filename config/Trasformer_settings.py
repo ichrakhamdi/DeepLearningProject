@@ -3,17 +3,12 @@ import warnings
 import pandas as pd
 from config.general_settings import GeneralSettings
 
-class CNNTransformerSettings(GeneralSettings):
+class TransformerSettings(GeneralSettings):
     # Model configuration
-    # CNN part
-    CNN_FILTERS = 64
-    KERNEL_SIZE = 3
-    POOL_SIZE = 2
-    # Transformer part
-    NUM_HEADS = 4       # Number of attention heads
-    KEY_DIM = 32        # Dimension of key/query/value per head
-    FF_DIM = 64         # Hidden layer size in feed forward network inside transformer
-    NUM_TRANSFORMER_BLOCKS = 1 # Number of transformer encoder blocks
+    NUM_HEADS = 8       # Number of attention heads
+    KEY_DIM = 64        # Dimension of key/query/value per head
+    FF_DIM = 128        # Hidden layer size in feed forward network inside transformer
+    NUM_TRANSFORMER_BLOCKS = 2 # Number of transformer encoder blocks
     DROPOUT_RATE = 0.1
     LEARNING_RATE = 0.001
     BATCH_SIZE = 1024
@@ -22,7 +17,7 @@ class CNNTransformerSettings(GeneralSettings):
 
     # Paths
     BASE_DIR = Path(__file__).resolve().parent.parent
-    ARTIFACTS_PATH = BASE_DIR / 'artifacts' / 'CNNTransformer'
+    ARTIFACTS_PATH = BASE_DIR / 'artifacts' / 'transformer'
     MODELS_PATH = ARTIFACTS_PATH / 'models'
     SCALERS_PATH = ARTIFACTS_PATH / 'scalers'
     ENCODERS_PATH = ARTIFACTS_PATH / 'encoders'
