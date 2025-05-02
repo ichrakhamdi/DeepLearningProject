@@ -39,6 +39,7 @@ class BaseExperimentRunner:
         })
 
     def _save_artifacts(self, exp_id, model, encoder):
+        model.save(self.config.MODELS_PATH / f"{exp_id}_model.h5")
         dump(self.preprocessor.scaler, self.config.SCALERS_PATH / f"{exp_id}_scaler.joblib")
         if encoder:
             dump(encoder, self.config.ENCODERS_PATH / f"{exp_id}_encoder.joblib")

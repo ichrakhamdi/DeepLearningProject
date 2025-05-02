@@ -10,6 +10,7 @@ from experiments_runners.BaseExperimentRunner import BaseExperimentRunner
 from config.LSTM_settings import LSTMSettings
 
 from models.lstm.trainer import LSTMTrainer
+from models.lstm.utils import _make_windows
 
 
 class LSTMExperimentRunner(BaseExperimentRunner):
@@ -41,8 +42,8 @@ class LSTMExperimentRunner(BaseExperimentRunner):
             )
 
             # 4) Reshape for LSTM input (samples, timesteps, features)
-            X_train = X_train.reshape(-1, 1, len(self.config.FEATURE_COLS))
-            X_val = X_val.reshape(-1, 1, len(self.config.FEATURE_COLS))
+            X_train, y_train = _make_windows(X_train, y_train, self.config.WINDOW_SIZE)
+            X_val,   y_val   = _make_windows(X_val,   y_val,   self.config.WINDOW_SIZE)
 
             # 5) Build & train model using LSTMTrainer
             num_classes = 1 if class_type == 'binary' else len(np.unique(y_train))
@@ -60,7 +61,7 @@ class LSTMExperimentRunner(BaseExperimentRunner):
             X_test, y_test, _ = self.preprocessor.preprocess_validation_test(
                 self.test_df, class_type
             )
-            X_test = X_test.reshape(-1, 1, len(self.config.FEATURE_COLS))
+            X_test, y_test = _make_windows(X_test, y_test, self.config.WINDOW_SIZE)
 
             self._evaluate_and_save(exp_id, model, X_test, y_test, encoder)
             self._save_artifacts(exp_id, model, encoder)
