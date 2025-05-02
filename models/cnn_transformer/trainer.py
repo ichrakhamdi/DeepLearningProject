@@ -3,11 +3,13 @@ import tensorflow as tf
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
 from tensorflow.keras.metrics import Precision, Recall, AUC
 
-from config.cnn_transformer_settings import CNNTransformerSettings
+# Adjust settings import to use the new CNN+Transformer settings
+from config.CNNTFTransformer_settings import CNNTransformerSettings
 from models.cnn_transformer.model import CNNTransformerModel
 
 class CNNTransformerTrainer:
     def __init__(self, experiment_id):
+        # Use CNNTransformerSettings
         self.config = CNNTransformerSettings()
         self.experiment_id = experiment_id
 
@@ -15,12 +17,15 @@ class CNNTransformerTrainer:
         if len(X_train.shape) != 3:
             raise ValueError(f"Input shape must be 3D (samples, timesteps, features). Got {X_train.shape}")
 
+        # Instantiate the CNNTransformerModel using parameters from CNNTransformerSettings
         model = CNNTransformerModel(
             input_shape=X_train.shape[1:],
             num_classes=num_classes,
+            # CNN params from config
             filters=self.config.CNN_FILTERS,
             kernel_size=self.config.KERNEL_SIZE,
             pool_size=self.config.POOL_SIZE,
+            # Transformer params from config
             num_heads=self.config.NUM_HEADS,
             key_dim=self.config.KEY_DIM,
             ff_dim=self.config.FF_DIM,
@@ -66,6 +71,7 @@ class CNNTransformerTrainer:
         ]
 
     def _get_callbacks(self):
+        # Use MODELS_PATH from CNNTransformerSettings
         checkpoint_path = self.config.MODELS_PATH / f'best_cnn_transformer_model_{self.experiment_id}.h5'
         checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
 

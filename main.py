@@ -1,197 +1,49 @@
-import itertools
-import numpy as np
 import pandas as pd
-import matplotlib.pyplot as plt
-import seaborn as sns
-import tensorflow as tf
-from joblib import dump
-from sklearn.metrics import classification_report, confusion_matrix
-from sklearn.model_selection import train_test_split
+from utils import sample_per_class
+import argparse
 
-from config.settings import LSTMSettings
-from data.code.preprocessor import DataPreprocessor
-from models.lstm.trainer import LSTMTrainer
+from experiments_runners.TFTransformerExperimentRunner import TFTransformerExperimentRunner
+from experiments_runners.LSTMExperimentRunner import LSTMExperimentRunner
+from experiments_runners.TransformerExperimentRunner import TransformerExperimentRunner
+from experiments_runners.CNNTransformerExperimentRunner import CNNTransformerExperimentRunner
 
 
-# Fenêtrage (N, 18) → (N//win, win, 18)
-def _make_windows(X, y, win):
-    X_seq, y_seq = [], []
-    for i in range(0, len(X) - win + 1, win):      # stride = win
-        X_seq.append(X[i : i + win])
-        y_seq.append(y[i + win - 1])               # étiquette du dernier pas
-    return np.stack(X_seq), np.array(y_seq)
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--model", type=str, help="Model to use", default="TabTransformer")
+    args = parser.parse_args()
+    print(f"model selected: {args.model}")
 
+    train_df = pd.read_csv("data/concatenated/train.csv")
+    test_df = pd.read_csv("data/concatenated/test.csv")
 
+    # labels = ['label_2', 'label_6', 'label_19']
+    # # Apply separately
+    # train_df = sample_per_class(train_df, labels)
+    # test_df = sample_per_class(test_df, labels)
 
-train_df = pd.read_csv("data/concatenated/train.csv")
-test_df  = pd.read_csv("data/concatenated/test.csv")
+    print('loading data done!')
 
+    if args.model == "LSTM":
+        runner = LSTMExperimentRunner(train_df, test_df)
+        runner.run_experiments()
+        print("=== All experiments completed successfully ===")
+    elif args.model == "Transformer":
+        runner = TransformerExperimentRunner(train_df, test_df)
+        runner.run_experiments()
+        print("=== All experiments completed successfully ===")
+    elif args.model == "CNNTransformer":
+        runner = CNNTransformerExperimentRunner(train_df, test_df)
+        runner.run_experiments()
+        print("=== All experiments completed successfully ===")
+    elif args.model == "TabTransformer":
+        runner = TFTransformerExperimentRunner(train_df, test_df)
+        runner.run_experiments()
+        print("=== All experiments completed successfully ===")
+    else:
+        print("model not recognized")
 
-class LSTMExperimentRunner:
-    def __init__(self, train_data, test_data):
-        self.config       = LSTMSettings()
-        self.preprocessor = DataPreprocessor()
-        self.results      = []
-        self.train_df     = train_data
-        self.test_df      = test_data
-
-    # ------------------------------------------------------------------
-    def run_experiments(self):
-        self._run_combination_experiments()
-        self._save_results()
-    # ------------------------------------------------------------------
-    def _run_combination_experiments(self):
-        for combo in itertools.product(
-            self.config.CLASS_TYPES,
-            self.config.AUGMENTATIONS,
-            self.config.CLASS_WEIGHTS
-        ):
-            self._run_single_experiment(*combo)
-
-    # ------------------------------------------------------------------
-    def _run_single_experiment(self, class_type, aug, cw):
-        exp_id = f"{class_type}_aug{aug}_cw{cw}"
-        print(f"\n=== Running experiment: {exp_id} ===")
-
-        try:
-            # 1) split train/val
-            train_df_split, val_df_split = train_test_split(
-                self.train_df, test_size=0.2, random_state=42
-            )
-
-            # 2) preprocessing
-            X_train, y_train, encoder = self.preprocessor.preprocess_train(
-                train_df_split, class_type, augmentation=aug
-            )
-            X_val, y_val, _ = self.preprocessor.preprocess_validation_test(
-                val_df_split, class_type
-            )
-
-            # 3) fenêtres temporelles (shape -> (batch, 4, 18))
-            X_train, y_train = _make_windows(X_train, y_train, self.config.WINDOW_SIZE)
-            X_val,   y_val   = _make_windows(X_val,   y_val,   self.config.WINDOW_SIZE)
-
-            print(">>> input shape", X_train.shape)   # debug : (batch, 4, 18)
-
-            # 4) build & train
-            num_classes  = 1 if class_type == "binary" else len(np.unique(y_train))
-            class_weights = (
-                self.preprocessor.get_class_weights(y_train) if cw else None
-            )
-
-            trainer        = LSTMTrainer(experiment_id=exp_id)
-            model, history = trainer.train(
-                X_train, y_train,
-                X_val,   y_val,
-                num_classes, class_weights
-            )
-
-            # 5) test set
-            X_test, y_test, _ = self.preprocessor.preprocess_validation_test(
-                self.test_df, class_type
-            )
-            X_test, y_test = _make_windows(X_test, y_test, self.config.WINDOW_SIZE)
-
-            # 6) reporting & artefacts
-            self._evaluate_and_save(exp_id, model, X_test, y_test, encoder)
-            self._save_artifacts(exp_id, model, encoder)
-            self._save_plots(exp_id, history, model, X_test, y_test, encoder)
-
-        except Exception as e:
-            print(f"Experiment failed: {e}")
-            self._log_error(exp_id, str(e))
-
-    # ===================== artefacts & plots ==========================
-    def _evaluate_and_save(self, exp_id, model, X_test, y_test, encoder):
-        y_pred = model.predict(X_test)
-
-        if model.output_shape[-1] == 1:             # binary
-            y_pred_class = (y_pred > 0.5).astype(int)
-            class_names  = ['Benign', 'Attack']
-        else:                                       # multi-classe
-            y_pred_class = np.argmax(y_pred, axis=1)
-            class_names  = encoder.classes_ if encoder else [
-                str(i) for i in range(model.output_shape[-1])
-            ]
-
-        report = classification_report(
-            y_test, y_pred_class, target_names=class_names, output_dict=True
-        )
-        cm = confusion_matrix(y_test, y_pred_class)
-
-        pd.DataFrame(report).transpose().to_csv(
-            self.config.RESULTS_PATH / f"{exp_id}_report.csv"
-        )
-        pd.DataFrame(cm).to_csv(
-            self.config.RESULTS_PATH / f"{exp_id}_cm.csv"
-        )
-
-        self.results.append(
-            {
-                'experiment'  : exp_id,
-                'accuracy'    : report['accuracy'],
-                'macro_f1'    : report['macro avg']['f1-score'],
-                'weighted_f1' : report['weighted avg']['f1-score'],
-            }
-        )
-
-    # ------------------------------------------------------------------
-    def _save_artifacts(self, exp_id, model, encoder):
-        model.save(self.config.MODELS_PATH / f"{exp_id}_model.h5")
-        dump(self.preprocessor.scaler, self.config.SCALERS_PATH / f"{exp_id}_scaler.joblib")
-        if encoder:
-            dump(encoder, self.config.ENCODERS_PATH / f"{exp_id}_encoder.joblib")
-
-    # ------------------------------------------------------------------
-    def _save_plots(self, exp_id, history, model, X_test, y_test, encoder):
-        # courbes loss / accuracy
-        plt.figure(figsize=(12, 5))
-
-        plt.subplot(1, 2, 1)
-        plt.plot(history.history['accuracy'],     label='Train')
-        plt.plot(history.history['val_accuracy'], label='Validation')
-        plt.title(f'{exp_id} Accuracy')
-        plt.legend()
-
-        plt.subplot(1, 2, 2)
-        plt.plot(history.history['loss'],     label='Train')
-        plt.plot(history.history['val_loss'], label='Validation')
-        plt.title(f'{exp_id} Loss')
-        plt.legend()
-
-        plt.savefig(self.config.PLOTS_PATH / f"{exp_id}_curves.png")
-        plt.close()
-
-        # matrice de confusion (multi-classe seulement)
-        if model.output_shape[-1] > 1:
-            plt.figure(figsize=(15, 12))
-            sns.heatmap(
-                confusion_matrix(y_test, np.argmax(model.predict(X_test), axis=1)),
-                annot=True, fmt='d',
-                xticklabels=encoder.classes_ if encoder else None,
-                yticklabels=encoder.classes_ if encoder else None
-            )
-            plt.title(f'{exp_id} Confusion Matrix')
-            plt.xlabel('Predicted')
-            plt.ylabel('True')
-            plt.xticks(rotation=45)
-            plt.yticks(rotation=0)
-            plt.tight_layout()
-            plt.savefig(self.config.PLOTS_PATH / f"{exp_id}_cm.png")
-            plt.close()
-
-    # ------------------------------------------------------------------
-    def _log_error(self, exp_id, error):
-        self.results.append({'experiment': exp_id, 'error': error, 'status': 'failed'})
-
-    def _save_results(self):
-        pd.DataFrame(self.results).to_csv(
-            self.config.RESULTS_PATH / 'experiment_results.csv', index=False
-        )
-    # ------------------------------------------------------------------
 
 
 if __name__ == "__main__":
-    runner = LSTMExperimentRunner(train_df, test_df)
-    runner.run_experiments()
-    print("=== All experiments completed successfully ===")
+    main()

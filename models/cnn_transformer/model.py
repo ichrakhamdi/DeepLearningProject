@@ -45,9 +45,23 @@ class CNNTransformerModel:
     def _build_model(self):
         inputs = Input(shape=self.input_shape)
 
+        # CNN Feature Extractor Block
+        # You can add more Conv1D/MaxPooling1D layers
         x = Conv1D(filters=self.filters, kernel_size=self.kernel_size, activation='relu', padding='same')(inputs)
+        # Optional: Batch Normalization
+        # x = BatchNormalization()(x)
         x = MaxPooling1D(pool_size=self.pool_size, padding='same')(x)
         x = Dropout(self.dropout_rate)(x)
+
+        # Optional: Add another CNN block
+        # x = Conv1D(filters=self.filters*2, kernel_size=self.kernel_size, activation='relu', padding='same')(x)
+        # x = MaxPooling1D(pool_size=self.pool_size, padding='same')(x)
+        # x = Dropout(self.dropout_rate)(x)
+
+        # Transformer Blocks
+        # Note: The output shape of CNN might change sequence length/feature dim.
+        # Ensure the Transformer part handles this shape.
+        # Positional encoding might be added here if sequence order is still important after CNN.
 
         for _ in range(self.num_transformer_blocks):
             x = self._transformer_encoder(x)
@@ -60,3 +74,11 @@ class CNNTransformerModel:
         outputs = Dense(self.num_classes, activation=activation)(x)
 
         return Model(inputs=inputs, outputs=outputs)
+
+# Example Usage (requires data preprocessing steps):
+# input_shape = (window_size, num_features) # e.g., (10, 78)
+# num_classes = 1 # For binary classification
+# cnn_transformer = CNNTransformerModel(input_shape, num_classes)
+# model = cnn_transformer.model
+# model.summary()
+# model.compile(optimizer="adam", loss="binary_crossentropy", metrics=["accuracy"])

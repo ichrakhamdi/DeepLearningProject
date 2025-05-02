@@ -1,12 +1,14 @@
+import os
+
 import tensorflow as tf
 from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
 from tensorflow.keras.metrics import Precision, Recall, AUC
-from config.settings import LSTMSettings
+from config.LSTM_settings import LSTMSettings
 from models.lstm.model import LSTMModel
 
 class LSTMTrainer:
     def __init__(self, experiment_id):
-        self.config = LSTMSettings()
+        self.lstm_config = LSTMSettings()
         self.experiment_id = experiment_id
         
     def train(self, X_train, y_train, X_val, y_val, num_classes, class_weights):
@@ -15,7 +17,7 @@ class LSTMTrainer:
         model = LSTMModel(X_train.shape[1:], num_classes).model
         
         model.compile(
-            optimizer=tf.keras.optimizers.Adam(learning_rate=self.config.LEARNING_RATE),
+            optimizer=tf.keras.optimizers.Adam(learning_rate=self.lstm_config.LEARNING_RATE),
             loss=self._get_loss(num_classes),
             metrics=self._get_metrics(num_classes)
         )
@@ -25,8 +27,8 @@ class LSTMTrainer:
         history = model.fit(
             X_train, y_train,
             validation_data=(X_val, y_val),
-            epochs=self.config.EPOCHS,
-            batch_size=self.config.BATCH_SIZE,
+            epochs=self.lstm_config.EPOCHS,
+            batch_size=self.lstm_config.BATCH_SIZE,
             class_weight=class_weights,
             callbacks=callbacks,
             verbose=1
@@ -56,17 +58,20 @@ class LSTMTrainer:
         return [
             EarlyStopping(
                 monitor='val_loss',
-                patience=self.config.PATIENCE,
+                patience=self.lstm_config.PATIENCE,
                 restore_best_weights=True
             ),
             ReduceLROnPlateau(
                 monitor='val_loss',
                 factor=0.2,
-                patience=self.config.PATIENCE // 2
+                patience=self.lstm_config.PATIENCE // 2
             ),
             ModelCheckpoint(
-                filepath=str(self.config.MODELS_PATH / f'best_model_{self.experiment_id}.h5'),
+                filepath=os.path.join(self.lstm_config.MODELS_PATH, f'ckpt_{self.experiment_id}', f'best_weights_{self.experiment_id}'),
                 save_best_only=True,
-                monitor='val_loss'
+                mode='min',
+                monitor='loss',
+                save_weights_only=True,
+                verbose=1
             )
         ]
